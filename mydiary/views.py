@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from .models import Content
-from .forms import ContentForm
+from .models import Content, Comment
+from .forms import ContentForm, CommentForm
 # Create your views here.
 def home(request):
     posts = Content.objects.all()
@@ -22,7 +22,18 @@ def new(request):
 
 def detail(request, index):
     post = get_object_or_404(Content, pk = index)
-    return render(request, 'detail.html', {'post':post})
+    comment_list = Comment.objects.filter(post=post)
+    if request.method =="POST":
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            comment = comment_form.save(commit=False)
+            comment.published_date = timezone.now()
+            comment.post = post
+            comment.save()
+            return redirect('detail', pk=index)
+    else:
+        comment_form = CommentForm()
+    return render(request, 'detail.html', {'post':post, 'comment_list': comment_list, 'comment_form': comment_form})
 
 def edit(request, index):
     post = get_object_or_404(Content, pk = index)
@@ -42,3 +53,8 @@ def delete(request,pk):
     post = get_object_or_404(Content, pk=pk)
     post.delete()
     return redirect('home')
+
+def delete_comment(request, index, comment_pk):
+    comment = get_object_or_404(Comment,pk=comment_pk)
+    comment.delete()
+    return redirect('detail', pk=index)
